@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Weighted Grade Calculator</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f1f5f9;color:#172338;font:18px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:clamp(16px,5vw,56px)}main{max-width:760px;margin:auto;background:white;padding:clamp(20px,5vw,44px);border-radius:24px;box-shadow:0 12px 40px #1723380d}h1{font-size:clamp(28px,5vw,38px);line-height:1.2;margin:0 0 12px;letter-spacing:-.03em}.intro{color:#526176;margin:0 0 28px}.rows{display:grid;gap:16px}.row{display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:18px;align-items:center;padding:20px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px}h2{font-size:20px;margin:0}label{display:block;font-size:15px;font-weight:650;margin-bottom:6px;color:#43516a}.input-wrap{position:relative}input{width:100%;min-width:0;min-height:54px;border:1px solid #a8b5c6;border-radius:9px;padding:10px 30px 10px 12px;font:inherit;font-size:21px;color:#172338;background:#fff}input:focus-visible{outline:3px solid #93c5fd;outline-offset:2px;border-color:#2563eb}input[aria-invalid="true"]{border-color:#b42318}.unit{position:absolute;right:10px;top:50%;transform:translateY(-50%);color:#64748b;pointer-events:none}input[type=number]{appearance:textfield;-moz-appearance:textfield}input::-webkit-inner-spin-button,input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}.status{margin:20px 0;color:#43516a;min-height:54px}.status.error{color:#a32616}.result{background:#eff6ff;border:1px solid #bfdbfe;border-radius:16px;padding:24px;text-align:center}.result-label{margin:0;font-weight:650;color:#254568}output{display:block;font-weight:750;font-size:clamp(42px,8vw,60px);line-height:1.3;color:#174fba;margin-top:6px}.hint{margin:8px 0 0;font-size:15px;color:#526176}@media(max-width:540px){.row{grid-template-columns:1fr 1fr;gap:12px;padding:16px}h2{grid-column:1/-1}.status{font-size:16px}main{border-radius:18px}}
+</style>
+</head>
+<body>
+<main>
+<h1>Weighted Grade Calculator</h1>
+<p class="intro">Enter your scores and adjust the weights to calculate your overall grade instantly.</p>
+<form id="calculator" novalidate>
+<div class="rows">
+<section class="row" aria-labelledby="assignment-heading">
+<h2 id="assignment-heading">Assignment</h2>
+<div><label for="assignment">Score (0–100)</label><input id="assignment" type="number" min="0" max="100" step="any" inputmode="decimal" placeholder="e.g. 85" required></div>
+<div><label for="assignment-weight">Weight</label><div class="input-wrap"><input id="assignment-weight" type="number" min="0" max="100" step="any" inputmode="decimal" value="30" aria-label="Assignment weight, percent" required><span class="unit" aria-hidden="true">%</span></div></div>
+</section>
+<section class="row" aria-labelledby="midterm-heading">
+<h2 id="midterm-heading">Midterm</h2>
+<div><label for="midterm">Score (0–100)</label><input id="midterm" type="number" min="0" max="100" step="any" inputmode="decimal" placeholder="e.g. 80" required></div>
+<div><label for="midterm-weight">Weight</label><div class="input-wrap"><input id="midterm-weight" type="number" min="0" max="100" step="any" inputmode="decimal" value="30" aria-label="Midterm weight, percent" required><span class="unit" aria-hidden="true">%</span></div></div>
+</section>
+<section class="row" aria-labelledby="final-heading">
+<h2 id="final-heading">Final</h2>
+<div><label for="final">Score (0–100)</label><input id="final" type="number" min="0" max="100" step="any" inputmode="decimal" placeholder="e.g. 90" required></div>
+<div><label for="final-weight">Weight</label><div class="input-wrap"><input id="final-weight" type="number" min="0" max="100" step="any" inputmode="decimal" value="40" aria-label="Final weight, percent" required><span class="unit" aria-hidden="true">%</span></div></div>
+</section>
+</div>
+<p id="status" class="status" role="status" aria-live="polite"></p>
+<div class="result">
+<p class="result-label" id="result-label">Weighted overall grade</p>
+<output id="grade" for="assignment midterm final assignment-weight midterm-weight final-weight" aria-labelledby="result-label" aria-live="polite">—</output>
+<p class="hint">Overall grade = sum of each score × its weight ÷ 100.</p>
+</div>
+</form>
+</main>
+<script>
+'use strict';
+const form = document.getElementById('calculator');
+const scores = ['assignment','midterm','final'].map(id => document.getElementById(id));
+const weights = scores.map(input => document.getElementById(input.id + '-weight'));
+const status = document.getElementById('status');
+const grade = document.getElementById('grade');
+function updateGrade() {
+  const inputs = [...scores, ...weights];
+  inputs.forEach(input => input.setAttribute('aria-invalid', String(input.validity.badInput || (input.value !== '' && !input.validity.valid))));
+  grade.textContent = '—';
+  status.classList.remove('error');
+  function message(text, error = false) {
+    status.textContent = text;
+    status.classList.toggle('error', error);
+  }
+  if (weights.some(input => input.value === '' || !input.validity.valid)) {
+    message('Enter a valid weight from 0 to 100 for each component.', true);
+    return;
+  }
+  const total = weights.reduce((sum, input) => sum + input.valueAsNumber, 0);
+  const totalText = Number(total.toFixed(6)).toString();
+  if (Math.abs(total - 100) > 1e-8) {
+    message('Weights total ' + totalText + '%. Adjust them to total 100%.', true);
+    return;
+  }
+  if (scores.some(input => input.validity.badInput || (input.value !== '' && !input.validity.valid))) {
+    message('Each score must be a number from 0 to 100.', true);
+    return;
+  }
+  if (scores.some(input => input.value === '')) {
+    message('Weights total 100%. Enter all three scores to see your grade.');
+    return;
+  }
+  const overall = scores.reduce((sum, input, index) => sum + input.valueAsNumber * weights[index].valueAsNumber / 100, 0);
+  grade.textContent = overall.toFixed(2) + '%';
+  message('Weights total 100%. Your grade is up to date.');
+}
+form.addEventListener('input', updateGrade);
+form.addEventListener('submit', event => event.preventDefault());
+updateGrade();
+</script>
+</body>
+</html>
